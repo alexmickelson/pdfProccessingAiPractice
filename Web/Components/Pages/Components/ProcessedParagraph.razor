@@ -12,6 +12,7 @@
   background-color: @(isHovered ? "white" : "transparent");
   color: @(isHovered ? "black" : "transparent");
   transition: all 0.2s ease;
+  cursor: pointer;
 ">
   @Paragraph.Content
 </div>
@@ -62,9 +63,3 @@
     boxDimensions = (xTop - padding, yTop - padding, width + 2 * padding, height + 2 * padding);
   }
 }
-
-<style>
-  div {
-    cursor: pointer;
-  }
-</style>

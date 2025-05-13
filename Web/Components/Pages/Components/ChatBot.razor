@@ -1,0 +1,78 @@
+@using System.Net.Http.Json
+@using Azure.AI.DocumentIntelligence
+@using Microsoft.Extensions.AI
+@rendermode InteractiveServer
+
+<h3>Chat with Ollama</h3>
+
+<div>
+  <div>
+    <label for="userInput">Your Message:</label>
+    <input id="userInput" @bind="UserMessage" @bind:event="oninput" />
+    <button @onclick="SendMessage">Send</button>
+  </div>
+  <div>
+    <h4>Chat History:</h4>
+    <ul>
+      @foreach (var message in ChatHistory)
+      {
+        <li><strong>@message.Sender:</strong> @message.Content</li>
+      }
+    </ul>
+  </div>
+</div>
+
+@code {
+  [Parameter]
+  public AnalyzeResult AiResponse { get; set; } = default!;
+  private string UserMessage { get; set; } = string.Empty;
+  private List<UiChatMessage> ChatHistory { get; set; } = new();
+  private string BotResponse = "";
+
+
+
+  private async Task SendMessage()
+  {
+    if (string.IsNullOrWhiteSpace(UserMessage))
+      return;
+
+    var message = $@"""
+<Document>
+{AiResponse.Content}
+</Document>
+
+{UserMessage}
+""";
+
+    ChatHistory.Add(new UiChatMessage { Sender = "You", Content = UserMessage });
+
+
+    var ollamaUrl = Environment.GetEnvironmentVariable("OLLAMA_URL") ?? throw new Exception("OLLAMA_URL is not set");
+    var client = new OllamaChatClient(ollamaUrl, "gemma3:12b");
+
+
+    var result = await client.GetResponseAsync(
+    [
+    @* new ChatMessage(ChatRole.System, $@"""
+you are a helpful assistant.
+"""), *@
+    new ChatMessage(ChatRole.User, message),
+]);
+    ChatHistory.Add(new UiChatMessage { Sender = "Ollama", Content = result.Text });
+
+
+    UserMessage = string.Empty;
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private class UiChatMessage
+  {
+    public string Sender { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+  }
+
+  private class OllamaResponse
+  {
+    public string Response { get; set; } = string.Empty;
+  }
+}

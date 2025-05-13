@@ -37,6 +37,11 @@
   </div>
 }
 
+@if(aiResult != null)
+{
+  <ChatBot AiResponse="aiResult" />
+}
+
 @code {
   private InputFile? fileInput;
   private IBrowserFile? selectedFile;
