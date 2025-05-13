@@ -1,0 +1,70 @@
+@using Azure.AI.DocumentIntelligence
+@using Microsoft.AspNetCore.Components
+@rendermode InteractiveServer
+<div @onmouseover="HandleMouseOver" @onmouseout="HandleMouseOut" style="
+  position: absolute;
+  left:@(boxDimensions.xTop)in;
+  top:@(boxDimensions.yTop)in;
+  width:@(boxDimensions.width)in;
+  height:@(boxDimensions.height)in;
+  border: 2px solid @(isHovered ? "blue" : "rgba(255, 0, 0, 0.5)");
+  pointer-events: auto;
+  background-color: @(isHovered ? "white" : "transparent");
+  color: @(isHovered ? "black" : "transparent");
+  transition: all 0.2s ease;
+">
+  @Paragraph.Content
+</div>
+
+@code {
+  [Parameter]
+  public DocumentParagraph Paragraph { get; set; } = default!;
+  private (double xTop, double yTop, double width, double height) boxDimensions;
+
+  private bool isHovered = false;
+
+  private void HandleMouseOver()
+  {
+    isHovered = true;
+    StateHasChanged();
+  }
+
+  private void HandleMouseOut()
+  {
+    isHovered = false;
+    StateHasChanged();
+  }
+
+  protected override void OnParametersSet()
+  {
+    var polygon = Paragraph.BoundingRegions[0].Polygon;
+
+    // The polygon array contains 4 points (x,y pairs)
+    // [x1,y1, x2,y2, x3,y3, x4,y4]
+    const double scale = 1.3;
+    double x1 = polygon[0] * scale; // left
+    double y1 = polygon[1] * scale; // top
+    double x2 = polygon[2] * scale; // right
+    double y2 = polygon[3] * scale; // top
+    double x3 = polygon[4] * scale; // right
+    double y3 = polygon[5] * scale; // bottom
+    double x4 = polygon[6] * scale; // left
+    double y4 = polygon[7] * scale; // bottom
+
+    // Calculate the box dimensions
+    double xTop = x1; // Use left coordinate
+    double yTop = y1; // Use top coordinate
+    double width = Math.Abs(x2 - x1); // Right - left
+    double height = Math.Abs(y3 - y1); // Bottom - top
+
+    const double padding = 0.02;
+
+    boxDimensions = (xTop - padding, yTop - padding, width + 2 * padding, height + 2 * padding);
+  }
+}
+
+<style>
+  div {
+    cursor: pointer;
+  }
+</style>

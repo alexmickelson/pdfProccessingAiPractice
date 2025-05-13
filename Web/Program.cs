@@ -1,8 +1,10 @@
 using Web.Components;
 using DotNetEnv;
 
-// Load environment variables from .env file
 Env.Load();
+
+    string key = Environment.GetEnvironmentVariable("AZURE_KEY") ?? throw new Exception("AZURE_KEY not set");
+    string endpoint = Environment.GetEnvironmentVariable("AZURE_URL") ?? throw new Exception("AZURE_URL not set");
 
 var builder = WebApplication.CreateBuilder(args);
 

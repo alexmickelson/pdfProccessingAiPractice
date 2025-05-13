@@ -1,90 +1,123 @@
 ﻿@page "/"
 @rendermode InteractiveServer
 @using System.IO
+@using Azure
+@using Azure.AI.DocumentIntelligence
 @using ImageMagick
+@using Web.Components.Pages.Components
 
 <PageTitle>PDF Viewer</PageTitle>
 
 <h1>PDF Upload and View</h1>
 
-<div class="upload-section">
-  <InputFile OnChange="@LoadFile" accept=".pdf" />
-</div>
+<form class="upload-section" @onsubmit="HandleSubmit" @onsubmit:preventDefault>
+  <InputFile OnChange="HandleFileSelected" accept=".pdf" />
+  <br>
+  <button class="btn btn-primary" type="submit">Process</button>
+</form>
+
 
 @if (_imageUrls != null && _imageUrls.Any())
 {
-  <div class="pdf-viewer" style="position: relative;">
-    @foreach (var box in boxes)
-    {
-      <div style="
-        position: absolute;
-        left:@(box.xTop)px;
-        top:@(box.yTop)px;
-        width:@(box.xBot - box.xTop)px;
-        height:@(box.yBot - box.yTop)px;
-        border: 2px solid red;
-      ">
-      </div>
-    }
+  <div class="" style="position: relative;">
     @foreach (var imageUrl in _imageUrls)
     {
-      <img src="@imageUrl" class="pdf-image" />
+      <img src="@imageUrl" class="" @ref="imageRef" style="
+        width: @(aiResult?.Pages[0].Width)in;
+        width: @(aiResult?.Pages[0].Height)in;
+      " />
+    }
+    @if(aiResult != null)
+    {
+      @foreach(var paragraph in aiResult.Paragraphs)
+      {
+        <ProcessedParagraph Paragraph="paragraph" />
+      }
     }
   </div>
 }
 
 @code {
-  private List<string>? _imageUrls;
-  private List<(int xTop, int yTop, int xBot, int yBot)> boxes = [(50, 50, 100, 100)];
+  private InputFile? fileInput;
+  private IBrowserFile? selectedFile;
+  private ElementReference imageRef;
+  private AnalyzeResult? aiResult = null;
+  private List<string> _imageUrls = new List<string>();
 
-  private async Task LoadFile(InputFileChangeEventArgs e)
+  private async Task HandleSubmit()
   {
-    var file = e.File;
-    if (file != null)
+    await convertImagesToPng();
+    await ProcessWithAzureAi();
+  }
+
+  private async Task convertImagesToPng()
+  {
+    if (selectedFile == null)
     {
-      var memoryStream = new MemoryStream();
-      await file.OpenReadStream(maxAllowedSize: 10485760).CopyToAsync(memoryStream);
-      memoryStream.Position = 0;
+      Console.WriteLine("cannot convert, no file selected");
+      return;
+    }
+    var memoryStream = new MemoryStream();
+    await selectedFile.OpenReadStream(maxAllowedSize: 10485760).CopyToAsync(memoryStream);
+    memoryStream.Position = 0;
 
-      _imageUrls = new List<string>();
+    _imageUrls = new List<string>();
 
-      // Convert PDF to PNG
-      using (var images = new MagickImageCollection())
+    using (var images = new MagickImageCollection())
+    {
+      images.Read(memoryStream, new MagickReadSettings
       {
-        // Read all pages of the PDF
-        images.Read(memoryStream, new MagickReadSettings
-        {
-          Format = MagickFormat.Pdf,
-          Density = new Density(300, 300) // Set DPI for good quality
-        });
+        Format = MagickFormat.Pdf,
+        Density = new Density(300, 300)
+      });
 
-        // Convert each page to PNG
-        foreach (var image in images)
-        {
-          var imageStream = new MemoryStream();
-          image.Write(imageStream, MagickFormat.Png);
-          var base64Data = Convert.ToBase64String(imageStream.ToArray());
-          _imageUrls.Add($"data:image/png;base64,{base64Data}");
-        }
+      foreach (var image in images)
+      {
+        var imageStream = new MemoryStream();
+        image.Write(imageStream, MagickFormat.Png);
+        var base64Data = Convert.ToBase64String(imageStream.ToArray());
+        _imageUrls.Add($"data:image/png;base64,{base64Data}");
       }
     }
+  }
+  private void HandleFileSelected(InputFileChangeEventArgs e)
+  {
+    selectedFile = e.File;
+  }
+
+  private async Task ProcessWithAzureAi()
+  {
+    if (selectedFile == null)
+    {
+      Console.WriteLine("cannot process with ai, no file selected");
+      return;
+    }
+    string key = Environment.GetEnvironmentVariable("AZURE_KEY") ?? throw new Exception("AZURE_KEY not set");
+    string endpoint = Environment.GetEnvironmentVariable("AZURE_URL") ?? throw new Exception("AZURE_URL not set");
+    AzureKeyCredential credential = new AzureKeyCredential(key);
+    DocumentIntelligenceClient client = new DocumentIntelligenceClient(new Uri(endpoint), credential);
+
+    var memoryStream = new MemoryStream();
+    await selectedFile.OpenReadStream(maxAllowedSize: 10485760).CopyToAsync(memoryStream);
+    memoryStream.Position = 0;
+
+    Operation<AnalyzeResult> operation = await client.AnalyzeDocumentAsync(
+    WaitUntil.Completed,
+    "prebuilt-layout",
+    BinaryData.FromStream(memoryStream)
+    );
+
+    aiResult = operation.Value;
   }
 }
 
 <style>
   .upload-section {
     margin: 20px 0;
+    display: flex;
+    gap: 10px;
+    align-items: center;
   }
 
-  .pdf-viewer {
-    margin: 20px 0;
-  }
-
-  .pdf-image {
-    width: 100%;
-    display: block;
-    margin-bottom: 20px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
+ 
 </style>
