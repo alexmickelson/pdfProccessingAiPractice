@@ -10,16 +10,19 @@
    @for (int i = 0; i < chatHistory.Count; i++)
    {
       var c = chatHistory[i];
-      var messageClass = i % 2 == 0 ? "bg-light border rounded p-2" : "bg-primary text-white border rounded p-2";
-      <div class="@messageClass">
+      var messageClass = i % 2 == 0 ? "bg-light border rounded p-2" : "bg-primary-subtle text-end  border rounded p-2";
+      <div class="@messageClass m-1">
         @foreach (var content in c.Content)
         {
-           <p>@content.Text</p>
+           <p>@(content.Text.Contains("</Document>")
+            ?content.Text.Split("</Document>")[1]
+            :content.Text)</p>
         }
       </div>
    }
   </div>
   <form class="mb-3" @onsubmit="HandleSubmit" @onsubmit:preventDefault>
+    <br>
     <div class="input-group">
       <input id="userInput" class="form-control" placeholder="Type your message..." @bind="UserMessage" @bind:event="oninput" />
       <button class="btn btn-primary" type="submit" disabled="@isLoading">Send</button>
@@ -42,13 +45,13 @@
   protected override void OnInitialized()
   {
       chatHistory.Add(
-      new SystemChatMessage($@"""
+      new SystemChatMessage($@"
 <Document>
 {AiResponse.Content}
 </Document>
 
 You help people read documents to fill out forms
-"""));
+"));
   }
 
   private async Task HandleSubmit()
