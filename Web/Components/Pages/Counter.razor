@@ -1,7 +1,7 @@
 ﻿@page "/counter"
 @using Azure;
 @using Azure.AI.OpenAI
-@using OpenAI.Chat
+@using Microsoft.Extensions.AI
 @rendermode InteractiveServer
 
 <PageTitle>Chat</PageTitle>
@@ -14,30 +14,31 @@
 @foreach(var c in chatHistory)
 {
     <div class="chat-message">
-        @foreach (var content in c.Content)
-        {
-            <p>@content.Text</p>
-        }
+        @c.Role @c.Text
     </div>
 }
-@if(response != null)
+
+@if (response?.NotableAttributes != null && response.NotableAttributes.Any())
 {
-    @foreach(var c in response.Content)
-    {
-        <div class="chat-message">
-            @c.Text
-        </div>
-    }
+    <div class="card m-3">
+        <h3>Notable Attributes:</h3>
+        <ul>
+            @foreach (var a in response.NotableAttributes)
+            {
+                <li><strong>@a.Key:</strong> @a.Value</li>
+            }
+        </ul>
+    </div>
 }
 @code {
     private string UserInput = "";
     List<ChatMessage> chatHistory = [
-        new SystemChatMessage(@"""
+        new ChatMessage(ChatRole.System, @"
             You help people read documents to fill out forms
-        """)
+        ")
     ];
 
-    private ChatCompletion? response;
+    private DocumentResponse? response;
 
     private async Task SendMessage()
     {
@@ -45,17 +46,22 @@
         var azureOpenAiUrl= Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") ?? throw new Exception("AZURE_OPENAI_ENDPOINT is not set");
         var model = "o4-mini-alex-faculty-dev";
 
-        AzureOpenAIClient azureClient = new(
+        var azureClient = new AzureOpenAIClient(
             new Uri(azureOpenAiUrl),
-            new AzureKeyCredential(azureOpenAiKey));
-        var chatClient = azureClient.GetChatClient(model);
+            new AzureKeyCredential(azureOpenAiKey),
+            new AzureOpenAIClientOptions(version: Azure.AI.OpenAI.AzureOpenAIClientOptions.ServiceVersion.V2025_01_01_Preview));
+        IChatClient chatClient = azureClient
+            .GetChatClient(deploymentName: model)
+            .AsIChatClient();
 
-        var newMessage = new UserChatMessage(UserInput);
+        var newMessage = new ChatMessage(ChatRole.User, UserInput);
         chatHistory.Add(newMessage);
 
-        response = await chatClient.CompleteChatAsync(chatHistory);
+        response = (await chatClient.GetResponseAsync<DocumentResponse>(chatHistory)).Result;
 
-        chatHistory.Add(new AssistantChatMessage(response.Content[0].Text));
+        chatHistory.Add(new ChatMessage(ChatRole.Assistant, response.Message));
         await InvokeAsync(StateHasChanged);
     }
+
+    public record DocumentResponse(string Message, Dictionary<string, string> NotableAttributes);
 }
