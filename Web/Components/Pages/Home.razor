@@ -11,7 +11,7 @@
 <div class="row">
   <div class="col-6">
     <form class="upload-section" @onsubmit="HandleSubmit" @onsubmit:preventDefault>
-      <InputFile OnChange="HandleFileSelected" accept=".pdf" />
+      <InputFile OnChange="HandleFileSelected" accept=".pdf" MaxAllowedSize="26214400" />
       <br>
       <button class="btn btn-primary" type="submit">Process</button>
     </form>
@@ -24,12 +24,12 @@
         {
           <div style="overflow: hidden; width: 100%; height: 600px; border: 1px solid #ccc; position: relative;">
             <ZoomPanContainer>
-                <img src="@imageUrl" style="
-                  width: @(aiResult?.Pages[0].Width)in;
-                  height: @(aiResult?.Pages[0].Height)in;
-                  user-select: none;
-                  pointer-events: none;
-                " />
+              <img src="@imageUrl" style="
+                width: @(aiResult?.Pages[0].Width)in;
+                height: @(aiResult?.Pages[0].Height)in;
+                user-select: none;
+                pointer-events: none;
+              " />
               @if (aiResult != null)
               {
                 @foreach (var paragraph in aiResult.Paragraphs)
@@ -115,11 +115,11 @@
     await selectedFile.OpenReadStream(maxAllowedSize: 10485760).CopyToAsync(memoryStream);
     memoryStream.Position = 0;
 
-    Operation<AnalyzeResult> operation = await client.AnalyzeDocumentAsync(
-    WaitUntil.Completed,
-    "prebuilt-layout",
+      Operation<AnalyzeResult> operation = await client.AnalyzeDocumentAsync(
+      WaitUntil.Completed,
+      "prebuilt-layout",
     BinaryData.FromStream(memoryStream)
-    );
+      );
 
     aiResult = operation.Value;
   }

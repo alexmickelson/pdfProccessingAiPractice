@@ -5,13 +5,18 @@ Env.Load();
 
 string key = Environment.GetEnvironmentVariable("AZURE_DI_KEY") ?? throw new Exception("AZURE_DI_KEY not set");
 string endpoint = Environment.GetEnvironmentVariable("AZURE_DI_URL") ?? throw new Exception("AZURE_DI_URL not set");
-    var ollamaUrl = Environment.GetEnvironmentVariable("OLLAMA_URL") ?? throw new Exception("OLLAMA_URL not set");
+var ollamaUrl = Environment.GetEnvironmentVariable("OLLAMA_URL") ?? throw new Exception("OLLAMA_URL not set");
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 1024 * 1024 * 25; // 25 MB, adjust as needed
+});
 
 var app = builder.Build();
 
@@ -24,7 +29,6 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 
 app.UseAntiforgery();
 

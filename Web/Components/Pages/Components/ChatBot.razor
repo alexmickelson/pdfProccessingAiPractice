@@ -5,7 +5,7 @@
 @using OpenAI.Chat
 @rendermode InteractiveServer
 
-<div>
+<div>  
   <div>
     <label for="userInput">Your Message:</label>
     <input id="userInput" @bind="UserMessage" @bind:event="oninput" />
@@ -17,10 +17,10 @@
     {
         <div class="chat-message">
             @foreach (var content in c.Content)
-            {
+      {
                 <p>@content.Text</p>
-            }
-        </div>
+      }
+      </div>
     }
   </div>
 </div>
