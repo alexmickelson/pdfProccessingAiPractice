@@ -1,39 +1,61 @@
 ﻿@page "/counter"
-@using Microsoft.Extensions.AI
+@using Azure;
+@using Azure.AI.OpenAI
+@using OpenAI.Chat
 @rendermode InteractiveServer
 
 <PageTitle>Chat</PageTitle>
-
-
-<h3>Ollama Chat</h3>
 
 <textarea @bind="UserInput" placeholder="Ask something..." rows="4" cols="60"></textarea>
 <br />
 <button @onclick="SendMessage">Send</button>
 
-@if (!string.IsNullOrWhiteSpace(BotResponse))
+
+@foreach(var c in chatHistory)
 {
-    <p><b>Bot:</b> @BotResponse</p>
+    <div class="chat-message">
+        @foreach (var content in c.Content)
+        {
+            <p>@content.Text</p>
+        }
+    </div>
 }
-
-
+@if(response != null)
+{
+    @foreach(var c in response.Content)
+    {
+        <div class="chat-message">
+            @c.Text
+        </div>
+    }
+}
 @code {
     private string UserInput = "";
-    private string BotResponse = "";
+    List<ChatMessage> chatHistory = [
+        new SystemChatMessage(@"""
+            You help people read documents to fill out forms
+        """)
+    ];
+
+    private ChatCompletion? response;
 
     private async Task SendMessage()
     {
-        var ollamaUrl = Environment.GetEnvironmentVariable("OLLAMA_URL") ?? throw new Exception("OLLAMA_URL is not set");
-        var client = new OllamaChatClient(ollamaUrl, "gemma3:12b");
+        var azureOpenAiKey = Environment.GetEnvironmentVariable("AZURE_OPENAI_KEY") ?? throw new Exception("AZURE_OPENAI_KEY is not set");
+        var azureOpenAiUrl= Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") ?? throw new Exception("AZURE_OPENAI_ENDPOINT is not set");
+        var model = "o4-mini-alex-faculty-dev";
 
-        var result = await client.GetResponseAsync(
-        [
-        new ChatMessage(ChatRole.System, $@"""
-you are a helpful assistant.
-"""),
-new ChatMessage(ChatRole.User, UserInput),
-]);
-        BotResponse= result.Text;
+        AzureOpenAIClient azureClient = new(
+            new Uri(azureOpenAiUrl),
+            new AzureKeyCredential(azureOpenAiKey));
+        var chatClient = azureClient.GetChatClient(model);
+
+        var newMessage = new UserChatMessage(UserInput);
+        chatHistory.Add(newMessage);
+
+        response = await chatClient.CompleteChatAsync(chatHistory);
+
+        chatHistory.Add(new AssistantChatMessage(response.Content[0].Text));
         await InvokeAsync(StateHasChanged);
     }
 }

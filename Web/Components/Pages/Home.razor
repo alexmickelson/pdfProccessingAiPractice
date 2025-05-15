@@ -8,39 +8,48 @@
 
 <PageTitle>PDF Viewer</PageTitle>
 
-<h1>PDF Upload and View</h1>
+<div class="row">
+  <div class="col-6">
+    <form class="upload-section" @onsubmit="HandleSubmit" @onsubmit:preventDefault>
+      <InputFile OnChange="HandleFileSelected" accept=".pdf" />
+      <br>
+      <button class="btn btn-primary" type="submit">Process</button>
+    </form>
 
-<form class="upload-section" @onsubmit="HandleSubmit" @onsubmit:preventDefault>
-  <InputFile OnChange="HandleFileSelected" accept=".pdf" />
-  <br>
-  <button class="btn btn-primary" type="submit">Process</button>
-</form>
 
-
-@if (_imageUrls != null && _imageUrls.Any())
-{
-  <div class="" style="position: relative;">
-    @foreach (var imageUrl in _imageUrls)
+    @if (_imageUrls != null && _imageUrls.Any())
     {
-      <img src="@imageUrl" class="" @ref="imageRef" style="
-        width: @(aiResult?.Pages[0].Width)in;
-        width: @(aiResult?.Pages[0].Height)in;
-      " />
-    }
-    @if(aiResult != null)
-    {
-      @foreach(var paragraph in aiResult.Paragraphs)
-      {
-        <ProcessedParagraph Paragraph="paragraph" />
-      }
+      <div class="" style="position: relative;">
+        @foreach (var imageUrl in _imageUrls)
+        {
+          <div style="overflow: hidden; width: 100%; height: 600px; border: 1px solid #ccc; position: relative;">
+            <ZoomPanContainer>
+                <img src="@imageUrl" style="
+                  width: @(aiResult?.Pages[0].Width)in;
+                  height: @(aiResult?.Pages[0].Height)in;
+                  user-select: none;
+                  pointer-events: none;
+                " />
+              @if (aiResult != null)
+              {
+                @foreach (var paragraph in aiResult.Paragraphs)
+                {
+                  <ProcessedParagraph Paragraph="paragraph" />
+                }
+              }
+            </ZoomPanContainer>
+          </div>
+        }
+      </div>
     }
   </div>
-}
-
-@if(aiResult != null)
-{
-  <ChatBot AiResponse="aiResult" />
-}
+  <div class="col-6">
+    @if (aiResult != null)
+    {
+      <ChatBot AiResponse="aiResult" />
+    }
+  </div>
+</div>
 
 @code {
   private InputFile? fileInput;
@@ -97,8 +106,8 @@
       Console.WriteLine("cannot process with ai, no file selected");
       return;
     }
-    string key = Environment.GetEnvironmentVariable("AZURE_KEY") ?? throw new Exception("AZURE_KEY not set");
-    string endpoint = Environment.GetEnvironmentVariable("AZURE_URL") ?? throw new Exception("AZURE_URL not set");
+    string key = Environment.GetEnvironmentVariable("AZURE_DI_KEY") ?? throw new Exception("AZURE_DI_KEY not set");
+    string endpoint = Environment.GetEnvironmentVariable("AZURE_DI_URL") ?? throw new Exception("AZURE_DI_URL not set");
     AzureKeyCredential credential = new AzureKeyCredential(key);
     DocumentIntelligenceClient client = new DocumentIntelligenceClient(new Uri(endpoint), credential);
 
@@ -123,6 +132,4 @@
     gap: 10px;
     align-items: center;
   }
-
- 
 </style>

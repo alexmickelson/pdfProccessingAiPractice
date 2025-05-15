@@ -3,8 +3,8 @@ using Web.Components;
 
 Env.Load();
 
-string key = Environment.GetEnvironmentVariable("AZURE_KEY") ?? throw new Exception("AZURE_KEY not set");
-string endpoint = Environment.GetEnvironmentVariable("AZURE_URL") ?? throw new Exception("AZURE_URL not set");
+string key = Environment.GetEnvironmentVariable("AZURE_DI_KEY") ?? throw new Exception("AZURE_DI_KEY not set");
+string endpoint = Environment.GetEnvironmentVariable("AZURE_DI_URL") ?? throw new Exception("AZURE_DI_URL not set");
     var ollamaUrl = Environment.GetEnvironmentVariable("OLLAMA_URL") ?? throw new Exception("OLLAMA_URL not set");
 
 var builder = WebApplication.CreateBuilder(args);
